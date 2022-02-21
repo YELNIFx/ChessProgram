@@ -23,6 +23,7 @@ base_r.centery = 350 #Sets y-coordinate
 
 #Representation of chess board
 board = [[" " for i in range(8)] for i in range(8)]
+
 #Representation of capture board
 capture = [[" " for i in range(8)] for i in range(8)]
 
@@ -55,13 +56,25 @@ bk = piece("b", "k", "chess_art/black_king.png")
 move = piece("m", "m", "chess_art/move_marker.png")
 attack = piece("a", "a", "chess_art/attack_marker.png")
 
+board = [[" ", " ", " ", " ", " ", " ", " ", " "],
+             [" ", " ", " ", " ", " ", " ", " ", " "],
+             [" ", " ", " ", wp, " ", " ", " ", " "],
+             [" ", " ", " ", " ", " ", " ", " ", " "],
+             [" ", " ", " ", " ", " ", " ", " ", " "],
+             [" ", " ", " ", " ", " ", " ", " ", " "],
+             [" ", " ", " ", " ", " ", " ", " ", " "],
+             [" ", " ", " ", " ", " ", " ", " ", " "]]
+
 #Adding pieces to array in correct positions
 def start_board(board):
-    board[0] = [br, bkn, bb, bq, bk, bb, bkn, br]
-    board[7] = [wr, wkn, wb, wq, wk, wb, wkn, wr]
-    for i in range(8):
-        board[1][i] = bp
-        board[6][i] = wp
+    # board[0] = [br, bkn, bb, bq, bk, bb, bkn, br]
+    # board[7] = [wr, wkn, wb, wq, wk, wb, wkn, wr]
+    # for i in range(8):
+    #     board[1][i] = bp
+    #     board[6][i] = wp
+    # for i in range(2, 6):
+    #     for j in range(8):
+    #         board[i][j] = " "
     return board
 
 #Returns display coordinates of the board tile inputted
@@ -178,15 +191,21 @@ def remove():
 def do_move(x, y, piece):
     #Swap pieces
     temp = board[piece[1]][piece[0]]
+    #Rook castling
     if temp.type == "k" and x == 6: #If short castle
         rook = board[y][7]
         board[y][7] = " "
         board[y][5] = rook
     if temp.type == "k" and x == 2: #If long castle
-
         rook = board[y][0]
         board[y][0] = " "
         board[y][3] = rook
+    #Pawn promotion
+    if temp.type == "p":
+        if temp.colour == "w" and y == 0: #White pawn
+            temp = wq
+        if temp.colour == "b" and y == 7: #Black pawn
+            temp = bq
     board[piece[1]][piece[0]] = " "
     board[y][x] = temp
     #---
@@ -321,13 +340,15 @@ def king(x, y):
                             capture[y + j][x + i] = attack
                 if board[y][x].castle == True:
                     #Short Castle
-                    if board[y][7].type == "r" and board[y][7].castle == True and board[y][5] == move and board[y][6] == " ":
-                        if not check().isCheck(board, (x, y), (6, y)):
-                            board[y][6] = move
+                    if board[y][7] != " ":
+                        if board[y][7].type == "r" and board[y][7].castle == True and board[y][5] == move and board[y][6] == " ":
+                            if not check().isCheck(board, (x, y), (6, y)):
+                                board[y][6] = move
                     #Long Castle
-                    if board[y][0].type == "r" and board[y][0].castle == True and board[y][1] == " " and board[y][2] == " " and board[y][3] == move:
-                        if not check().isCheck(board, (x, y), (2, y)):
-                            board[y][2] = move
+                    if board[y][0] != " ":
+                        if board[y][0].type == "r" and board[y][0].castle == True and board[y][1] == " " and board[y][2] == " " and board[y][3] == move:
+                            if not check().isCheck(board, (x, y), (2, y)):
+                                board[y][2] = move
     return board
 
 class check():
@@ -497,7 +518,7 @@ start_board(board)
 #Main loop
 while 1:
     pg.event.get() #Adds all user events/inputs into event queue
-    time.sleep(0.2)
+    time.sleep(0.1)
     mouse = pg.mouse.get_pos() #Gets current mouse position
     screen.fill([49, 46, 43]) #Sets background colour
     screen.blit(plate, plate_r)
@@ -537,6 +558,7 @@ while 1:
         if b7.rect.collidepoint(mouse): #Hover animation
             screen.blit(b7.imageh, (b7.rect[0], b7.rect[1] - 1))
             if ev.type == pg.MOUSEBUTTONDOWN: #If clicked
+                start_board(board)
                 back = False
                 play = False
 
