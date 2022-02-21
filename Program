@@ -1,0 +1,543 @@
+#Imports python modules
+import pygame as pg
+import math
+import time
+
+pg.init() #Initialises all pygame modules
+
+screen = pg.display.set_mode((1200, 700)) #Sets display size
+
+#Loads the board
+plate = pg.image.load("chess_art/board.png").convert_alpha()
+plate = pg.transform.scale(plate, (plate.get_width()*5.22, plate.get_height()*5.22)) #Makes image larger
+plate_r = plate.get_rect()
+plate_r.centerx = 340 #Sets x-coordinate
+plate_r.centery = 350 #Sets y-coordinate
+
+#Loads the button back plate
+base = pg.image.load("chess_art/base.png").convert_alpha()
+base = pg.transform.scale(base, (base.get_width()*5.2, base.get_height()*5.2)) #Makes image larger
+base_r = base.get_rect()
+base_r.centerx = 945 #Sets x-coordinate
+base_r.centery = 350 #Sets y-coordinate
+
+#Representation of chess board
+board = [[" " for i in range(8)] for i in range(8)]
+#Representation of capture board
+capture = [[" " for i in range(8)] for i in range(8)]
+
+#Class to create pieces
+class piece(pg.sprite.Sprite):
+    def __init__(self, colour, type, image):
+        pg.sprite.Sprite.__init__(self)
+        self.colour = colour
+        self.type = type
+        img = pg.image.load(image).convert_alpha()
+        self.image = pg.transform.scale(img, (img.get_width()*5.22, img.get_height()*5.22))
+        self.castle = True
+
+    def noCastle(self):
+        self.castle = False
+
+#Creating pieces to store in variables
+wp = piece("w", "p", "chess_art/white_pawn.png")
+wr = piece("w", "r", "chess_art/white_rook.png")
+wkn = piece("w", "n", "chess_art/white_knight.png")
+wb = piece("w", "b", "chess_art/white_bishop.png")
+wq = piece("w", "q", "chess_art/white_queen.png")
+wk = piece("w", "k", "chess_art/white_king.png")
+bp = piece("b", "p", "chess_art/black_pawn.png")
+br = piece("b", "r", "chess_art/black_rook.png")
+bkn = piece("b", "n", "chess_art/black_knight.png")
+bb = piece("b", "b", "chess_art/black_bishop.png")
+bq = piece("b", "q", "chess_art/black_queen.png")
+bk = piece("b", "k", "chess_art/black_king.png")
+move = piece("m", "m", "chess_art/move_marker.png")
+attack = piece("a", "a", "chess_art/attack_marker.png")
+
+#Adding pieces to array in correct positions
+def start_board(board):
+    board[0] = [br, bkn, bb, bq, bk, bb, bkn, br]
+    board[7] = [wr, wkn, wb, wq, wk, wb, wkn, wr]
+    for i in range(8):
+        board[1][i] = bp
+        board[6][i] = wp
+    return board
+
+#Returns display coordinates of the board tile inputted
+def loc(tile, xy):
+    x = 59
+    y = 43
+    if xy == True:
+        if tile == 0:
+            return x
+        else:
+            return (x + tile*73)
+    else:
+        if tile == 0:
+            return y
+        else:
+            return (y + tile*73)
+
+#Loading pieces onto display
+def load_pieces():
+    for i in range(8):
+        for j in range(8):
+            if board[i][j] == " ": #If position has no piece, pass
+                pass
+            else: #Blits piece image onto display
+                screen.blit(board[i][j].image, (loc(j, True), loc(i, False)))
+            if capture[i][j] != " ": #Blits attack markers onto display
+                screen.blit(capture[i][j].image, (loc(j, True), loc(i, False)))
+
+#Class to create buttons
+class button(pg.sprite.Sprite):
+    def __init__(self, image, pos):
+        pg.sprite.Sprite.__init__(self)
+        img = pg.image.load(image).convert_alpha()
+        self.image = pg.transform.scale(img, (img.get_width()*5.2, img.get_height()*5.2)) #Image before
+        self.rect = self.image.get_rect(topleft = pos)
+        self.imageh = pg.transform.scale(img, (img.get_width()*5.4, img.get_height()*5.4)) #Image after
+
+#Creating buttons to store in variables
+b1 = button("chess_art/vs_player.png", (719,168))
+b2 = button("chess_art/vs_ai.png", (719, 241))
+b3 = button("chess_art/puzzles.png", (719, 314))
+b4 = button("chess_art/accounts.png", (719, 387))
+b5 = button("chess_art/settings.png", (719, 460))
+b6 = button("chess_art/quit.png", (719, 533))
+b7 = button("chess_art/back.png", (719, 592))
+buttons = [b1, b2, b3, b4, b5, b6]
+
+#Buttons
+def menu():
+    for i in range(6): #Display buttons
+        screen.blit(buttons[i].image, buttons[i].rect)
+    for button in buttons: #Animate buttons
+        if button.rect.collidepoint(mouse):
+            screen.blit(button.imageh, (button.rect[0], button.rect[1] - 1))
+
+#Converts to values useable by/in "board" array
+def click(pos, piece):
+    x = pos[0] - 59 #Sets board range: 0 < x < 584
+    y = pos[1] - 43 # ^ Same for y
+    if (x > 584 or x < 0) or (y > 584 or y < 0): #Returns no value if clicked outside of board
+        return
+    else:
+        #Converts to value usable by board array (0 to 7)
+        i = math.ceil((x*0.0137)-1.1)
+        j = math.ceil((y*0.0137)-1.1)
+        if board[j][i] == " ": #If no piece then return nothing
+            return
+        else:
+            if board[j][i].colour == col:
+                if board[j][i].type == "p" and board[j][i].colour == "b":
+                    remove()
+                    b_pawns(i, j)
+                    return (i, j)
+                if board[j][i].type == "p" and board[j][i].colour == "w":
+                    remove()
+                    w_pawns(i, j)
+                    return (i, j)
+                if board[j][i].type == "r":
+                    remove()
+                    rook(i, j)
+                    return (i, j)
+                if board[j][i].type == "n":
+                    remove()
+                    knight(i, j)
+                    return (i, j)
+                if board[j][i].type == "b":
+                    remove()
+                    bishop(i, j)
+                    return (i, j)
+                if board[j][i].type == "q":
+                    remove()
+                    queen(i, j)
+                    return (i, j)
+                if board[j][i].type == "k":
+                    remove()
+                    king(i, j)
+                    return (i, j)
+            if board[j][i].type == "m":
+                do_move(i, j, piece)
+            if capture[j][i] == attack:
+                do_move(i, j, piece)
+
+#Removes all markers from board
+def remove():
+    for i in range(8):
+        for j in range(8):
+            if board[i][j] == move: #Move markers
+                board[i][j] = " "
+            if capture[i][j] == attack: #Attack markers
+                capture[i][j] = " "
+    return board
+
+#Make pieces move
+def do_move(x, y, piece):
+    #Swap pieces
+    temp = board[piece[1]][piece[0]]
+    if temp.type == "k" and x == 6: #If short castle
+        rook = board[y][7]
+        board[y][7] = " "
+        board[y][5] = rook
+    if temp.type == "k" and x == 2: #If long castle
+
+        rook = board[y][0]
+        board[y][0] = " "
+        board[y][3] = rook
+    board[piece[1]][piece[0]] = " "
+    board[y][x] = temp
+    #---
+    temp.noCastle() #Prevent castling if piece is moved
+    remove() #Remove move markers
+    turn() #Change turn colour
+
+#Checks if move is on board
+def valid(x):
+    if -1 < x[0] < len(board) and -1 < x[1] < len(board):
+        return True #Is
+    else:
+        return False #Isn't
+
+#Black pawn movement
+def b_pawns(x, y):
+    if y == 1: #If it hasn't moved yet
+        if (board[y + 1][x] == " ") and (board[y + 2][x] == " "):
+            if not check().isCheck(board, (x, y), (x, y + 2)):
+                board[y + 2][x] = move
+    if valid((x, y + 1)):
+        if (board[y + 1][x] == " "): #Moving one forward
+            if not check().isCheck(board, (x, y), (x, y + 1)):
+                board[y + 1][x] = move
+        if x != 0: #Prevents going off board
+            if (board[y + 1][x - 1] != " " and board[y + 1][x - 1].colour != "b"): #Capture to left
+                if not check().isCheck(board, (x, y), (x - 1, y + 1)):
+                    capture[y + 1][x - 1] = attack
+        if x != 7: #Prevents going off board
+            if (board[y + 1][x + 1] != " " and board[y + 1][x + 1].colour != "b"): #Capture to right
+                if not check().isCheck(board, (x, y), (x + 1, y + 1)):
+                    capture[y + 1][x + 1] = attack
+    return board
+
+#White pawn movement
+def w_pawns(x, y):
+    if y == 6: #If it hasn't moved yet
+        if (board[y - 1][x] == " ") and (board[y - 2][x] == " "):
+            if not check().isCheck(board, (x, y), (x, y - 2)):
+                board[y - 2][x] = move
+    if valid((x, y - 1)):
+        if (board[y - 1][x] == " "): #Moving one forward
+            if not check().isCheck(board, (x, y), (x, y - 1)):
+                board[y - 1][x] = move
+        if x != 0:
+            if (board[y - 1][x - 1] != " " and board[y - 1][x - 1].colour != "w"): #Capture to left
+                if not check().isCheck(board, (x, y), (x - 1, y - 1)):
+                    capture[y - 1][x - 1] = attack
+        if x != 7:
+            if (board[y - 1][x + 1] != " " and board[y - 1][x + 1].colour != "w"): #Capture to right
+                if not check().isCheck(board, (x, y), (x + 1, y - 1)):
+                    capture[y - 1][x + 1] = attack
+    return board
+
+#Rook movement
+def rook(x, y):
+    #Straight positions (left, right, up, down)
+    positions = [[[x, y - i] for i in range(1, y + 1)],
+                 [[x + i, y] for i in range(1, 8 - x)],
+                 [[x, y + i] for i in range(1, 8 - y)],
+                 [[x - i, y] for i in range(1, x + 1)]]
+    for directions in positions:
+        for moves in directions:
+            if not check().isCheck(board, (x, y), (moves[0], moves[1])):
+                if board[moves[1]][moves[0]] == " ": #Tile is empty
+                    board[moves[1]][moves[0]] = move
+                else:
+                    if board[moves[1]][moves[0]].colour != board[y][x].colour: #Tile has opposing piece
+                        capture[moves[1]][moves[0]] = attack
+                    break
+    return board
+
+#Knight movement
+def knight(x, y):
+    for i in range(-2, 3):
+        for j in range(-2, 3): #Values from a square radius around knight (5x5)
+            if j**2 + i**2 == 5: #Selects values that correlate to legal knight moves
+                if valid((x + i, y + j)):
+                    if not check().isCheck(board, (x, y), (x + i, y + j)):
+                        if board[y + j][x + i] == " ": #Tile is empty
+                            board[y + j][x + i] = move
+                        else:
+                            if board[y + j][x + i].colour != board[y][x].colour: #Tile has opposing piece
+                                capture[y + j][x + i] = attack
+    return board
+
+#Bishop movement
+def bishop(x, y):
+    #Diagonal positions
+    positions = [[[x + i, y - i] for i in range(1, 8)], [[x + i, y + i] for i in range(1, 8)], [[x - i, y + i] for i in range(1, 8)],
+                 [[x - i, y - i] for i in range(1, 8)]]
+    for direction in positions:
+        for moves in direction:
+            if valid((moves[0], moves[1])):
+                if not check().isCheck(board, (x, y), (moves[0], moves[1])):
+                    if board[moves[1]][moves[0]] == " ": #Tile is empty
+                        board[moves[1]][moves[0]] = move
+                    else:
+                        if board[moves[1]][moves[0]].colour != board[y][x].colour: #Tile has opposing piece
+                            capture[moves[1]][moves[0]] = attack
+                        break
+    return board
+
+#Queen movement
+def queen(x, y):
+    #Possible positions
+    positions = [[[x + i, y - i] for i in range(1, 8)], [[x + i, y + i] for i in range(1, 8)], [[x - i, y + i] for i in range(1, 8)],
+                 [[x - i, y - i] for i in range(1, 8)], [[x, y - i] for i in range(1, y + 1)], [[x + i, y] for i in range(1, 8 - x)],
+                 [[x, y + i] for i in range(1, 8 - y)], [[x - i, y] for i in range(1, x + 1)]]
+    for direction in positions:
+        for moves in direction:
+            if valid((moves[0], moves[1])):
+                if not check().isCheck(board, (x, y), (moves[0], moves[1])):
+                    if board[moves[1]][moves[0]] == " ": #Tile is empty
+                        board[moves[1]][moves[0]] = move
+                    else:
+                        if board[moves[1]][moves[0]].colour != board[y][x].colour: #Tile has opposing piece
+                            capture[moves[1]][moves[0]] = attack
+                        break
+    return board
+
+#King movement
+def king(x, y):
+    for i in range(-1, 2):
+        for j in range(-1, 2):
+            if valid((x + i, y + j)):
+                if not check().isCheck(board, (x, y), (x + i, y + j)):
+                    if board[y + j][x + i] == " ": #Tile is empty
+                        board[y + j][x + i] = move
+                    else:
+                        if board[y + j][ x + i].colour != board[y][x].colour: #Tile has opposing piece
+                            capture[y + j][x + i] = attack
+                if board[y][x].castle == True:
+                    #Short Castle
+                    if board[y][7].type == "r" and board[y][7].castle == True and board[y][5] == move and board[y][6] == " ":
+                        if not check().isCheck(board, (x, y), (6, y)):
+                            board[y][6] = move
+                    #Long Castle
+                    if board[y][0].type == "r" and board[y][0].castle == True and board[y][1] == " " and board[y][2] == " " and board[y][3] == move:
+                        if not check().isCheck(board, (x, y), (2, y)):
+                            board[y][2] = move
+    return board
+
+class check():
+    #Generates abstracted board mostly for testing, will probably change
+    def genTempBoard(self, board):
+        self.pieceBoard = [[" " for i in range(8)] for i in range(8)]
+        for i in range(8):
+            for j in range(8):
+                if board[j][i] == " " or board[j][i].type == "m" or board[j][i].type == "a":
+                    self.pieceBoard[j][i] = "  "
+                elif board[j][i].colour == "b":
+                    self.pieceBoard[j][i] = "b"+board[j][i].type
+                else:
+                    self.pieceBoard[j][i] = "w"+board[j][i].type
+
+    #Generate threat maps for both colours
+    def threatMap(self):
+        self.whiteAttackPos = []
+        self.blackAttackPos = []
+        self.whiteThreatBoard = [[" " for i in range(8)] for i in range(8)]
+        self.blackThreatBoard = [[" " for i in range(8)] for i in range(8)]
+        for i in range(8):
+            for j in range(8):
+                if self.pieceBoard[j][i] == "  ":
+                    pass
+                else:
+                    if self.pieceBoard[j][i][1] == "p":
+                        self.pawnThreat(i, j)
+                    if self.pieceBoard[j][i][1] == "r":
+                        self.rookThreat(i, j)
+                    if self.pieceBoard[j][i][1] == "n":
+                        self.knightThreat(i, j)
+                    if self.pieceBoard[j][i][1] == "b":
+                        self.bishopThreat(i, j)
+                    if self.pieceBoard[j][i][1] == "q":
+                        self.queenThreat(i, j)
+
+        # WHITE threat board
+        for i in range(len(self.whiteAttackPos)):
+            if valid(self.whiteAttackPos[i]):
+                self.whiteThreatBoard[self.whiteAttackPos[i][1]][self.whiteAttackPos[i][0]] = "x"
+
+        # BLACK threat board
+        for i in range(len(self.blackAttackPos)):
+            if valid(self.blackAttackPos[i]):
+                self.blackThreatBoard[self.blackAttackPos[i][1]][self.blackAttackPos[i][0]] = "x"
+
+    #Checks if move is legal, comparing the threat maps to the main chess board
+    def isCheck(self, board, before, after):
+        self.genTempBoard(board)
+        self.pseudoMove(before, after)
+        self.threatMap()
+        if self.pieceBoard[after[1]][after[0]][1] == "k":
+            if self.whiteThreatBoard[after[1]][after[0]] == "x" and self.pieceBoard[after[1]][after[0]][0] == "b":
+                return True
+            if self.blackThreatBoard[after[1]][after[0]] == "x" and self.pieceBoard[after[1]][after[0]][0] == "w":
+                return True
+        for i in range(8):
+            for j in range(8):
+                if self.pieceBoard[j][i] == "bk":
+                    if self.whiteThreatBoard[j][i] == "x":
+                        if self.pieceBoard[after[1]][after[0]][0] == "b":
+                            return True
+                if self.pieceBoard[j][i] == "wk":
+                    if self.blackThreatBoard[j][i] == "x":
+                        if self.pieceBoard[after[1]][after[0]][0] == "w":
+                            return True
+
+    #Makes possible moves
+    def pseudoMove(self, before, after):
+        self.pieceBoard[after[1]][after[0]] = self.pieceBoard[before[1]][before[0]]
+        self.pieceBoard[before[1]][before[0]] = "  "
+
+    def pawnThreat(self, x, y):
+        if self.pieceBoard[y][x][0] == "w":
+            self.whiteAttackPos.append((x + 1, y - 1))
+            self.whiteAttackPos.append((x - 1, y - 1))
+        elif self.pieceBoard[y][x][0] == "b":
+            self.blackAttackPos.append((x + 1, y + 1))
+            self.blackAttackPos.append((x - 1, y + 1))
+
+    def rookThreat(self, x, y):
+        pos = [[[x, y - i] for i in range(1, y + 1)],
+               [[x + i, y] for i in range(1, 8 - x)],
+               [[x, y + i] for i in range(1, 8 - y)],
+               [[x - i, y] for i in range(1, x + 1)]]
+        for direction in pos:
+            for move in direction:
+                if self.pieceBoard[move[1]][move[0]] == "  ":
+                    if self.pieceBoard[y][x][0] == "w":
+                        self.whiteAttackPos.append((move))
+                    elif self.pieceBoard[y][x][0] == "b":
+                        self.blackAttackPos.append((move))
+                else:
+                    if self.pieceBoard[y][x][0] == "w":
+                        self.whiteAttackPos.append((move))
+                    elif self.pieceBoard[y][x][0] == "b":
+                        self.blackAttackPos.append((move))
+                    break
+
+    def knightThreat(self, x, y):
+        for i in range(-2, 3):
+            for j in range(-2, 3):
+                if j ** 2 + i ** 2 == 5:
+                    if valid((x + i, y + j)):
+                        if self.pieceBoard[y][x][0] == "w":
+                            self.whiteAttackPos.append((x + i, y + j))
+                        elif self.pieceBoard[y][x][0] == "b":
+                            self.blackAttackPos.append((x + i, y + j))
+
+    def bishopThreat(self, x, y):
+        pos = [[[x + i, y - i] for i in range(1, 8)],
+               [[x + i, y + i] for i in range(1, 8)],
+               [[x - i, y + i] for i in range(1, 8)],
+               [[x - i, y - i] for i in range(1, 8)]]
+        for direction in pos:
+            for move in direction:
+                if valid(move):
+                    if self.pieceBoard[move[1]][move[0]] == "  ":
+                        if self.pieceBoard[y][x][0] == "w":
+                            self.whiteAttackPos.append((move))
+                        elif self.pieceBoard[y][x][0] == "b":
+                            self.blackAttackPos.append((move))
+                    else:
+                        if self.pieceBoard[y][x][0] == "w":
+                            self.whiteAttackPos.append((move))
+                        elif self.pieceBoard[y][x][0] == "b":
+                            self.blackAttackPos.append((move))
+                        break
+
+    def queenThreat(self, x, y):
+        pos = [[[x + i, y - i] for i in range(1, 8)], [[x + i, y + i] for i in range(1, 8)],
+               [[x - i, y + i] for i in range(1, 8)], [[x - i, y - i] for i in range(1, 8)],
+               [[x, y - i] for i in range(1, y + 1)], [[x + i, y] for i in range(1, 8 - x)],
+               [[x, y + i] for i in range(1, 8 - y)], [[x - i, y] for i in range(1, x + 1)]]
+        for direction in pos:
+            for move in direction:
+                if valid(move):
+                    if self.pieceBoard[move[1]][move[0]] == "  ":
+                        if self.pieceBoard[y][x][0] == "w":
+                            self.whiteAttackPos.append((move))
+                        elif self.pieceBoard[y][x][0] == "b":
+                            self.blackAttackPos.append((move))
+                    else:
+                        if self.pieceBoard[y][x][0] == "w":
+                            self.whiteAttackPos.append((move))
+                        elif self.pieceBoard[y][x][0] == "b":
+                            self.blackAttackPos.append((move))
+                        break
+
+col = "w"
+#Changes whose turn it is
+def turn():
+    global col
+    if col == "w":
+        col = "b"
+    elif col == "b":
+        col = "w"
+    return col
+
+select = 0
+back = False
+play = False
+#Loads starting positions for pieces when program is started
+start_board(board)
+
+#Main loop
+while 1:
+    pg.event.get() #Adds all user events/inputs into event queue
+    time.sleep(0.2)
+    mouse = pg.mouse.get_pos() #Gets current mouse position
+    screen.fill([49, 46, 43]) #Sets background colour
+    screen.blit(plate, plate_r)
+    screen.blit(base, base_r)
+    #Button clicking, if the mouse is clicked and over a button then True
+    for ev in pg.event.get():
+        if ev.type == pg.MOUSEBUTTONDOWN:
+            if click(mouse, select) == None:
+                pass
+            else:
+                select = click(mouse, select)
+        if back == False:
+            for button in buttons:
+                if button.rect.collidepoint(mouse) and ev.type == pg.MOUSEBUTTONDOWN:
+                    if button == b1:
+                        back = True
+                        play = True
+                    if button == b2:
+                        back = True
+                        play = True
+                    if button == b3:
+                        back = True
+                    if button == b4:
+                        back = True
+                    if button == b5:
+                        back = True
+                    if button == b6:
+                        pg.quit()
+    #If a button is clicked this function is no longer called
+    if back == False:
+        menu()
+    else:
+        if play == True:
+            load_pieces()
+        #Code for back button to return to main menu
+        screen.blit(b7.image, b7.rect)
+        if b7.rect.collidepoint(mouse): #Hover animation
+            screen.blit(b7.imageh, (b7.rect[0], b7.rect[1] - 1))
+            if ev.type == pg.MOUSEBUTTONDOWN: #If clicked
+                back = False
+                play = False
+
+    pg.display.update() #Updates the screen after every cycle
