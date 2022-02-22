@@ -57,12 +57,12 @@ move = piece("m", "m", "chess_art/move_marker.png")
 attack = piece("a", "a", "chess_art/attack_marker.png")
 
 board = [[" ", " ", " ", " ", " ", " ", " ", " "],
+             [" ", " ", bp, " ", " ", " ", " ", " "],
+             [" ", " ", " ", " ", " ", bp, " ", " "],
+             [" ", " ", " ", " ", " ", " ", " ", " "],
              [" ", " ", " ", " ", " ", " ", " ", " "],
              [" ", " ", " ", wp, " ", " ", " ", " "],
-             [" ", " ", " ", " ", " ", " ", " ", " "],
-             [" ", " ", " ", " ", " ", " ", " ", " "],
-             [" ", " ", " ", " ", " ", " ", " ", " "],
-             [" ", " ", " ", " ", " ", " ", " ", " "],
+             [" ", wp, " ", " ", " ", " ", " ", " "],
              [" ", " ", " ", " ", " ", " ", " ", " "]]
 
 #Adding pieces to array in correct positions
@@ -187,8 +187,11 @@ def remove():
                 capture[i][j] = " "
     return board
 
+prevMove = [(0,0),(0,0),(0,0)] #[(Original Position), (New position), (Piece Type)]
+
 #Make pieces move
 def do_move(x, y, piece):
+    global prevMove
     #Swap pieces
     temp = board[piece[1]][piece[0]]
     #Rook castling
@@ -200,18 +203,23 @@ def do_move(x, y, piece):
         rook = board[y][0]
         board[y][0] = " "
         board[y][3] = rook
-    #Pawn promotion
+    #---
+    #Pawn special moves
     if temp.type == "p":
+        if x == prevMove[1][0] and (y - prevMove[1][1])**2 == 1: #En passant
+            board[prevMove[1][1]][prevMove[1][0]] = " "
         if temp.colour == "w" and y == 0: #White pawn
             temp = wq
         if temp.colour == "b" and y == 7: #Black pawn
             temp = bq
+    #---
     board[piece[1]][piece[0]] = " "
     board[y][x] = temp
     #---
     temp.noCastle() #Prevent castling if piece is moved
     remove() #Remove move markers
     turn() #Change turn colour
+    prevMove = [(piece[0], piece[1]), (x, y), board[y][x].type] #[(Original Position), (New position), (Piece Type)]
 
 #Checks if move is on board
 def valid(x):
@@ -220,8 +228,17 @@ def valid(x):
     else:
         return False #Isn't
 
+#Returns True if enPassant is allowed
+def enPassant(x, y):
+    if prevMove[2] == "p":
+        if (prevMove[1][1] - prevMove[0][1])**2 == 4:
+            if prevMove[1][1] == y and (prevMove[1][0] - x)**2 == 1:
+                return True
+
 #Black pawn movement
 def b_pawns(x, y):
+    if enPassant(x, y):
+        board[prevMove[1][1] + 1][prevMove[1][0]] = move
     if y == 1: #If it hasn't moved yet
         if (board[y + 1][x] == " ") and (board[y + 2][x] == " "):
             if not check().isCheck(board, (x, y), (x, y + 2)):
@@ -242,6 +259,8 @@ def b_pawns(x, y):
 
 #White pawn movement
 def w_pawns(x, y):
+    if enPassant(x, y):
+        board[prevMove[1][1] - 1][prevMove[1][0]] = move
     if y == 6: #If it hasn't moved yet
         if (board[y - 1][x] == " ") and (board[y - 2][x] == " "):
             if not check().isCheck(board, (x, y), (x, y - 2)):
