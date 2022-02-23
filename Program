@@ -56,25 +56,25 @@ bk = piece("b", "k", "chess_art/black_king.png")
 move = piece("m", "m", "chess_art/move_marker.png")
 attack = piece("a", "a", "chess_art/attack_marker.png")
 
-board = [[" ", " ", " ", " ", " ", " ", " ", " "],
-             [" ", " ", bp, " ", " ", " ", " ", " "],
-             [" ", " ", " ", " ", " ", bp, " ", " "],
-             [" ", " ", " ", " ", " ", " ", " ", " "],
-             [" ", " ", " ", " ", " ", " ", " ", " "],
-             [" ", " ", " ", wp, " ", " ", " ", " "],
-             [" ", wp, " ", " ", " ", " ", " ", " "],
-             [" ", " ", " ", " ", " ", " ", " ", " "]]
+# board = [[" ", " ", " ", " ", " ", " ", " ", " "],
+#              [" ", " ", bp, " ", " ", " ", " ", " "],
+#              [" ", " ", " ", " ", " ", bp, " ", " "],
+#              [" ", " ", " ", " ", " ", " ", " ", " "],
+#              [" ", wr, " ", " ", " ", " ", " ", " "],
+#              [" ", " ", " ", wp, " ", " ", " ", " "],
+#              [" ", wp, " ", " ", " ", " ", " ", " "],
+#              [" ", " ", " ", " ", " ", " ", " ", " "]]
 
 #Adding pieces to array in correct positions
 def start_board(board):
-    # board[0] = [br, bkn, bb, bq, bk, bb, bkn, br]
-    # board[7] = [wr, wkn, wb, wq, wk, wb, wkn, wr]
-    # for i in range(8):
-    #     board[1][i] = bp
-    #     board[6][i] = wp
-    # for i in range(2, 6):
-    #     for j in range(8):
-    #         board[i][j] = " "
+    board[0] = [br, bkn, bb, bq, bk, bb, bkn, br]
+    board[7] = [wr, wkn, wb, wq, wk, wb, wkn, wr]
+    for i in range(8):
+        board[1][i] = bp
+        board[6][i] = wp
+    for i in range(2, 6):
+        for j in range(8):
+            board[i][j] = " "
     return board
 
 #Returns display coordinates of the board tile inputted
@@ -207,7 +207,7 @@ def do_move(x, y, piece):
     #---
     #Pawn special moves
     if temp.type == "p":
-        if x == prevMove[1][0] and (y - prevMove[1][1])**2 == 1: #En passant
+        if (x - piece[0])**2 == 1 and piece[1] == prevMove[1][1] and x == prevMove[1][0] and prevMove[2] == "p": #En passant
             board[prevMove[1][1]][prevMove[1][0]] = " "
         if temp.colour == "w" and y == 0: #White pawn
             temp = wq
@@ -221,6 +221,10 @@ def do_move(x, y, piece):
     remove() #Remove move markers
     turn() #Change turn colour
     prevMove = [(piece[0], piece[1]), (x, y), board[y][x].type] #[(Original Position), (New position), (Piece Type)]
+    print(len(possibleMoves("b")))
+    print(possibleMoves("b"))
+    if len(possibleMoves("b")) == 0 or len(possibleMoves("w")) == 0:
+        print("CHECKMATE")
 
 #Checks if move is on board
 def valid(x):
@@ -386,6 +390,40 @@ def king(x, y):
                             if not check().isCheck(board, (x, y), (2, y)):
                                 moveList.append((2, y))
     return (moveList, attackList)
+
+#Creates lists for both colours of possible moves each piece can make
+def possibleMoves(col):
+    w_moves = [] #White move list
+    b_moves = [] #Black move list
+    for i in range(8):
+        for j in range(8):
+            temp = () #Used to hold move for that piece temporarily so it can be added to the correct colour
+            if board[j][i] == " ":
+                continue
+            elif board[j][i].type == "p" and board[j][i].colour == "b":
+                b_moves.append(((i, j), b_pawns(i, j), "p"))
+            elif board[j][i].type == "p" and board[j][i].colour == "w":
+                w_moves.append(((i, j), w_pawns(i, j), "p"))
+            elif board[j][i].type == "r":
+                temp = ((i,j), rook(i, j), "r")
+            elif board[j][i].type == "n":
+                temp = ((i,j), knight(i, j), "kn")
+            elif board[j][i].type == "b":
+                temp = ((i,j), bishop(i, j), "b")
+            elif board[j][i].type == "q":
+                temp = ((i,j), queen(i, j), "q")
+            elif board[j][i].type == "k":
+                temp = ((i,j), king(i, j), "k")
+            if temp == (): #Prevents empty move list from being added
+                continue
+            elif board[j][i].colour == "w": #If the piece is white
+                w_moves.append(temp)
+            elif board[j][i].colour == "b": #If the piece is black
+                b_moves.append(temp)
+    if col == "w":
+        return w_moves
+    elif col == "b":
+        return b_moves
 
 class check():
     #Generates abstracted board mostly for testing, will probably change
