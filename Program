@@ -221,8 +221,6 @@ def do_move(x, y, piece):
     remove() #Remove move markers
     turn() #Change turn colour
     prevMove = [(piece[0], piece[1]), (x, y), board[y][x].type] #[(Original Position), (New position), (Piece Type)]
-    print(len(possibleMoves("b")))
-    print(possibleMoves("b"))
     if len(possibleMoves("b")) == 0 or len(possibleMoves("w")) == 0:
         print("CHECKMATE")
 
@@ -401,9 +399,9 @@ def possibleMoves(col):
             if board[j][i] == " ":
                 continue
             elif board[j][i].type == "p" and board[j][i].colour == "b":
-                b_moves.append(((i, j), b_pawns(i, j), "p"))
+                temp = ((i, j), b_pawns(i, j), "p")
             elif board[j][i].type == "p" and board[j][i].colour == "w":
-                w_moves.append(((i, j), w_pawns(i, j), "p"))
+                temp = ((i, j), w_pawns(i, j), "p")
             elif board[j][i].type == "r":
                 temp = ((i,j), rook(i, j), "r")
             elif board[j][i].type == "n":
@@ -414,7 +412,7 @@ def possibleMoves(col):
                 temp = ((i,j), queen(i, j), "q")
             elif board[j][i].type == "k":
                 temp = ((i,j), king(i, j), "k")
-            if temp == (): #Prevents empty move list from being added
+            if temp == () or (len(temp[1][0]) == 0 and len(temp[1][1]) == 0): #Prevents empty move list from being added
                 continue
             elif board[j][i].colour == "w": #If the piece is white
                 w_moves.append(temp)
