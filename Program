@@ -56,14 +56,14 @@ bk = piece("b", "k", "chess_art/black_king.png")
 move = piece("m", "m", "chess_art/move_marker.png")
 attack = piece("a", "a", "chess_art/attack_marker.png")
 
-board = [[bb, bp, " ", " ", " ", " ", " ", wr],
-             [bp, bk, " ", " ", " ", " ", " ", " "],
-             [" ", " ", " ", " ", " ", " ", " ", wr],
-             [" ", " ", " ", " ", " ", " ", bp, br],
+board = [[bk, bq, " ", " ", " ", " ", " ", " "],
              [" ", " ", " ", " ", " ", " ", " ", " "],
              [" ", " ", " ", " ", " ", " ", " ", " "],
-             [" ", " ", " ", " ", " ", " ", bp, " "],
-             [wr, " ", wr, wq, " ", " ", " ", bq]]
+             [" ", " ", " ", " ", " ", " ", " ", " "],
+             [" ", " ", " ", " ", " ", " ", " ", " "],
+             [" ", " ", " ", " ", " ", " ", " ", " "],
+             [wk, " ", " ", " ", " ", " ", " ", " "],
+             [" ", " ", " ", " ", " ", " ", " ", " "]]
 
 #Adding pieces to array in correct positions
 def start_board(board):
@@ -193,7 +193,7 @@ def remove():
 prevMove = [(0,0),(0,0),(0,0)] #[(Original Position), (New position), (Piece Type)]
 
 #Make pieces move
-def do_move(x, y, piece):
+def do_move(x, y, piece): #(new x pos, new y pos, (old pos))
     global prevMove
     #Swap pieces
     temp = board[piece[1]][piece[0]]
@@ -223,15 +223,23 @@ def do_move(x, y, piece):
     remove() #Remove move markers
     turn() #Change turn colour
     prevMove = [(piece[0], piece[1]), (x, y), board[y][x].type] #[(Original Position), (New position), (Piece Type)]
-    print(possibleMoves("b"))
-    print(len(possibleMoves("b")))
-    if len(possibleMoves("b")) == 0:
+    #CheckMate
+    if len(possibleMoves("b")) == 0 and check().isMate(board):
         print("CHECKMATE")
-        screen.blit(white_win.image, white_win.rect)
-    elif len(possibleMoves("w")) == 0:
+    elif len(possibleMoves("w")) == 0 and check().isMate(board):
         print("CHECKMATE")
-        screen.blit(black_win.image, black_win.rect)
+    #Draw
+    draw()
 
+#Detects draw
+def draw():
+    #Stalemate
+    if len(possibleMoves("b")) == 0 or len(possibleMoves("w")) == 0:
+        print("DRAW")
+    #Dead position
+    print(board)
+    if all(isinstance()):
+        print("DRAW")
 
 #Checks if move is on board
 def valid(x):
@@ -500,6 +508,16 @@ class check():
                     if self.blackThreatBoard[j][i] == "x":
                         if self.pieceBoard[after[1]][after[0]][0] == "w":
                             return True
+
+    def isMate(self, board):
+        self.genTempBoard(board)
+        self.threatMap()
+        for i in range(8):
+            for j in range(8):
+                if self.pieceBoard[j][i] == "bk" and self.whiteThreatBoard[j][i] == "x":
+                    return True
+                elif self.pieceBoard[j][i] == "wk" and self.blackThreatBoard[j][i] == "x":
+                    return True
 
     #Makes possible moves
     def pseudoMove(self, before, after):
