@@ -56,25 +56,25 @@ bk = piece("b", "k", "chess_art/black_king.png")
 move = piece("m", "m", "chess_art/move_marker.png")
 attack = piece("a", "a", "chess_art/attack_marker.png")
 
-# board = [[" ", " ", " ", " ", " ", " ", " ", " "],
-#              [" ", " ", bp, " ", " ", " ", " ", " "],
-#              [" ", " ", " ", " ", " ", bp, " ", " "],
-#              [" ", " ", " ", " ", " ", " ", " ", " "],
-#              [" ", wr, " ", " ", " ", " ", " ", " "],
-#              [" ", " ", " ", wp, " ", " ", " ", " "],
-#              [" ", wp, " ", " ", " ", " ", " ", " "],
-#              [" ", " ", " ", " ", " ", " ", " ", " "]]
+board = [[bb, bp, " ", " ", " ", " ", " ", wr],
+             [bp, bk, " ", " ", " ", " ", " ", " "],
+             [" ", " ", " ", " ", " ", " ", " ", wr],
+             [" ", " ", " ", " ", " ", " ", bp, br],
+             [" ", " ", " ", " ", " ", " ", " ", " "],
+             [" ", " ", " ", " ", " ", " ", " ", " "],
+             [" ", " ", " ", " ", " ", " ", bp, " "],
+             [wr, " ", wr, wq, " ", " ", " ", bq]]
 
 #Adding pieces to array in correct positions
 def start_board(board):
-    board[0] = [br, bkn, bb, bq, bk, bb, bkn, br]
-    board[7] = [wr, wkn, wb, wq, wk, wb, wkn, wr]
-    for i in range(8):
-        board[1][i] = bp
-        board[6][i] = wp
-    for i in range(2, 6):
-        for j in range(8):
-            board[i][j] = " "
+    # board[0] = [br, bkn, bb, bq, bk, bb, bkn, br]
+    # board[7] = [wr, wkn, wb, wq, wk, wb, wkn, wr]
+    # for i in range(8):
+    #     board[1][i] = bp
+    #     board[6][i] = wp
+    # for i in range(2, 6):
+    #     for j in range(8):
+    #         board[i][j] = " "
     return board
 
 #Returns display coordinates of the board tile inputted
@@ -120,6 +120,8 @@ b4 = button("chess_art/accounts.png", (719, 387))
 b5 = button("chess_art/settings.png", (719, 460))
 b6 = button("chess_art/quit.png", (719, 533))
 b7 = button("chess_art/back.png", (719, 592))
+black_win = button("chess_art/black_win.png", (719, 168))
+white_win = button("chess_art/white_win.png", (719, 168))
 buttons = [b1, b2, b3, b4, b5, b6]
 
 #Buttons
@@ -221,8 +223,15 @@ def do_move(x, y, piece):
     remove() #Remove move markers
     turn() #Change turn colour
     prevMove = [(piece[0], piece[1]), (x, y), board[y][x].type] #[(Original Position), (New position), (Piece Type)]
-    if len(possibleMoves("b")) == 0 or len(possibleMoves("w")) == 0:
+    print(possibleMoves("b"))
+    print(len(possibleMoves("b")))
+    if len(possibleMoves("b")) == 0:
         print("CHECKMATE")
+        screen.blit(white_win.image, white_win.rect)
+    elif len(possibleMoves("w")) == 0:
+        print("CHECKMATE")
+        screen.blit(black_win.image, black_win.rect)
+
 
 #Checks if move is on board
 def valid(x):
@@ -299,13 +308,14 @@ def rook(x, y):
                  [[x - i, y] for i in range(1, x + 1)]]
     for directions in positions:
         for moves in directions:
-            if not check().isCheck(board, (x, y), (moves[0], moves[1])):
-                if board[moves[1]][moves[0]] == " ": #Tile is empty
+            if board[moves[1]][moves[0]] == " ": #Tile is empty
+                if not check().isCheck(board, (x, y), (moves[0], moves[1])):
                     moveList.append((moves[0], moves[1]))
-                else:
-                    if board[moves[1]][moves[0]].colour != board[y][x].colour: #Tile has opposing piece
+            else:
+                if board[moves[1]][moves[0]].colour != board[y][x].colour: #Tile has opposing piece
+                    if not check().isCheck(board, (x, y), (moves[0], moves[1])):
                         attackList.append((moves[0], moves[1]))
-                    break
+                break
     return (moveList, attackList)
 
 #Knight movement
@@ -334,13 +344,14 @@ def bishop(x, y):
     for direction in positions:
         for moves in direction:
             if valid((moves[0], moves[1])):
-                if not check().isCheck(board, (x, y), (moves[0], moves[1])):
-                    if board[moves[1]][moves[0]] == " ": #Tile is empty
+                if board[moves[1]][moves[0]] == " ": #Tile is empty
+                    if not check().isCheck(board, (x, y), (moves[0], moves[1])):
                         moveList.append((moves[0], moves[1]))
-                    else:
-                        if board[moves[1]][moves[0]].colour != board[y][x].colour: #Tile has opposing piece
+                else:
+                    if board[moves[1]][moves[0]].colour != board[y][x].colour: #Tile has opposing piece
+                        if not check().isCheck(board, (x, y), (moves[0], moves[1])):
                             attackList.append((moves[0], moves[1]))
-                        break
+                    break
     return (moveList, attackList)
 
 #Queen movement
@@ -354,13 +365,14 @@ def queen(x, y):
     for direction in positions:
         for moves in direction:
             if valid((moves[0], moves[1])):
-                if not check().isCheck(board, (x, y), (moves[0], moves[1])):
-                    if board[moves[1]][moves[0]] == " ": #Tile is empty
+                if board[moves[1]][moves[0]] == " ": #Tile is empty
+                    if not check().isCheck(board, (x, y), (moves[0], moves[1])):
                         moveList.append((moves[0], moves[1]))
-                    else:
-                        if board[moves[1]][moves[0]].colour != board[y][x].colour: #Tile has opposing piece
+                else:
+                    if board[moves[1]][moves[0]].colour != board[y][x].colour: #Tile has opposing piece
+                        if not check().isCheck(board, (x, y), (moves[0], moves[1])):
                             attackList.append((moves[0], moves[1]))
-                        break
+                    break
     return (moveList, attackList)
 
 #King movement
