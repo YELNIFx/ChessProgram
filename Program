@@ -56,14 +56,14 @@ bk = piece("b", "k", "chess_art/black_king.png")
 move = piece("m", "m", "chess_art/move_marker.png")
 attack = piece("a", "a", "chess_art/attack_marker.png")
 
-board = [[bk, bq, " ", " ", " ", " ", " ", " "],
+board = [[bk, " ", " ", " ", " ", " ", " ", " "],
+             [" ", bp, bp, " ", " ", " ", " ", " "],
+             [" ", bp, " ", " ", " ", " ", " ", " "],
              [" ", " ", " ", " ", " ", " ", " ", " "],
              [" ", " ", " ", " ", " ", " ", " ", " "],
              [" ", " ", " ", " ", " ", " ", " ", " "],
-             [" ", " ", " ", " ", " ", " ", " ", " "],
-             [" ", " ", " ", " ", " ", " ", " ", " "],
-             [wk, " ", " ", " ", " ", " ", " ", " "],
-             [" ", " ", " ", " ", " ", " ", " ", " "]]
+             [" ", " ", " ", " ", " ", wq, " ", " "],
+             [" ", " ", " ", " ", " ", " ", " ", wk]]
 
 #Adding pieces to array in correct positions
 def start_board(board):
@@ -115,18 +115,16 @@ class button(pg.sprite.Sprite):
 #Creating buttons to store in variables
 b1 = button("chess_art/vs_player.png", (719,168))
 b2 = button("chess_art/vs_ai.png", (719, 241))
-b3 = button("chess_art/puzzles.png", (719, 314))
-b4 = button("chess_art/accounts.png", (719, 387))
-b5 = button("chess_art/settings.png", (719, 460))
 b6 = button("chess_art/quit.png", (719, 533))
 b7 = button("chess_art/back.png", (719, 592))
 black_win = button("chess_art/black_win.png", (719, 168))
 white_win = button("chess_art/white_win.png", (719, 168))
-buttons = [b1, b2, b3, b4, b5, b6]
+resign = button("chess_art/resign.png", (963, 592))
+buttons = [b1, b2, b6]
 
 #Buttons
 def menu():
-    for i in range(6): #Display buttons
+    for i in range(3): #Display buttons
         screen.blit(buttons[i].image, buttons[i].rect)
     for button in buttons: #Animate buttons
         if button.rect.collidepoint(mouse):
@@ -191,10 +189,12 @@ def remove():
     return board
 
 prevMove = [(0,0),(0,0),(0,0)] #[(Original Position), (New position), (Piece Type)]
+allMoves = []
 
 #Make pieces move
 def do_move(x, y, piece): #(new x pos, new y pos, (old pos))
     global prevMove
+    global allMoves
     #Swap pieces
     temp = board[piece[1]][piece[0]]
     #Rook castling
@@ -223,6 +223,7 @@ def do_move(x, y, piece): #(new x pos, new y pos, (old pos))
     remove() #Remove move markers
     turn() #Change turn colour
     prevMove = [(piece[0], piece[1]), (x, y), board[y][x].type] #[(Original Position), (New position), (Piece Type)]
+    allMoves.append((prevMove[2], x + y)) #Piece type, position eg. [k34]
     #CheckMate
     if len(possibleMoves("b")) == 0 and check().isMate(board):
         print("CHECKMATE")
@@ -231,15 +232,44 @@ def do_move(x, y, piece): #(new x pos, new y pos, (old pos))
     #Draw
     draw()
 
+numPieces = [] #Total number of pieces on the board every move
+for i in range(49):
+    numPieces.append(6)
+
 #Detects draw
 def draw():
+    global numPieces
     #Stalemate
     if len(possibleMoves("b")) == 0 or len(possibleMoves("w")) == 0:
         print("DRAW")
-    #Dead position
-    print(board)
-    if all(isinstance()):
-        print("DRAW")
+    else:
+        #Dead position
+        remPieces = [] #All remaining pieces on board
+        for i in range(8):
+            for j in range(8):
+                if board[j][i] == " ":
+                    pass
+                else:
+                    remPieces.append(board[j][i].type)
+        if len(remPieces) == 2: #If King vs King
+            print("DRAW")
+        elif len(remPieces) == 3:
+            for i in range(3):
+                if remPieces[i] == "q" or remPieces[i] == "p": #If King vs (knight or bishop)
+                    break
+                elif i == 2:
+                    print("DRAW")
+        #Threefold repetition
+        if len(allMoves) >= 10:
+            i = len(allMoves) - 1
+            if allMoves[i] == allMoves[i - 4] == allMoves[i - 8]:
+                print("DRAW")
+        #50-move rule
+        numPieces.append(len(remPieces))
+        if len(numPieces) > 50:
+            i = len(numPieces) - 1
+            if numPieces[i] == numPieces[i - 50]:
+                print("DRAW")
 
 #Checks if move is on board
 def valid(x):
@@ -390,11 +420,12 @@ def king(x, y):
     for i in range(-1, 2):
         for j in range(-1, 2):
             if valid((x + i, y + j)):
-                if not check().isCheck(board, (x, y), (x + i, y + j)):
-                    if board[y + j][x + i] == " ": #Tile is empty
+                if board[y + j][x + i] == " ": #Tile is empty
+                    if not check().isCheck(board, (x, y), (x + i, y + j)):
                         moveList.append((x + i, y + j))
-                    else:
-                        if board[y + j][ x + i].colour != board[y][x].colour: #Tile has opposing piece
+                else:
+                    if board[y + j][ x + i].colour != board[y][x].colour: #Tile has opposing piece
+                        if not check().isCheck(board, (x, y), (x + i, y + j)):
                             attackList.append((x + i, y + j))
                 if board[y][x].castle == True:
                     #Short Castle
@@ -641,12 +672,6 @@ while 1:
                     if button == b2:
                         back = True
                         play = True
-                    if button == b3:
-                        back = True
-                    if button == b4:
-                        back = True
-                    if button == b5:
-                        back = True
                     if button == b6:
                         pg.quit()
     #If a button is clicked this function is no longer called
@@ -657,6 +682,7 @@ while 1:
             load_pieces()
         #Code for back button to return to main menu
         screen.blit(b7.image, b7.rect)
+        screen.blit(resign.image, resign.rect)
         if b7.rect.collidepoint(mouse): #Hover animation
             screen.blit(b7.imageh, (b7.rect[0], b7.rect[1] - 1))
             if ev.type == pg.MOUSEBUTTONDOWN: #If clicked
